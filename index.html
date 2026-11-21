@@ -1,0 +1,1512 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VoidCuts — AI Viral Video Clipping Studio</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter & Space Grotesk & Montserrat (for viral captions) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@800;900&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Space Grotesk', 'sans-serif'],
+            caption: ['Montserrat', 'sans-serif'],
+          },
+          colors: {
+            void: {
+              950: '#07070b',
+              900: '#0d0d14',
+              850: '#13131f',
+              800: '#1a1a2a',
+              700: '#27273f',
+            },
+            neon: {
+              violet: '#8b5cf6',
+              indigo: '#6366f1',
+              emerald: '#10b981',
+              amber: '#f59e0b',
+              rose: '#f43f5e'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom Scrollbar & Glass Effects */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0d0d14; }
+    ::-webkit-scrollbar-thumb { background: #27273f; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #8b5cf6; }
+
+    .glass-panel {
+      background: rgba(19, 19, 31, 0.78);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .neon-glow {
+      box-shadow: 0 0 28px -6px rgba(139, 92, 246, 0.45);
+    }
+
+    .emerald-glow {
+      box-shadow: 0 0 24px -6px rgba(16, 185, 129, 0.4);
+    }
+
+    @keyframes pulse-ring {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      70% { transform: scale(1.12); opacity: 0; }
+      100% { transform: scale(0.95); opacity: 0; }
+    }
+    .animate-pulse-ring {
+      animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    @keyframes popWord {
+      0% { transform: scale(0.88); }
+      60% { transform: scale(1.08); }
+      100% { transform: scale(1); }
+    }
+    .word-pop {
+      display: inline-block;
+      animation: popWord 0.22s ease-out forwards;
+    }
+
+    /* Range slider styling */
+    input[type="range"] {
+      -webkit-appearance: none;
+      background: rgba(255,255,255,0.1);
+      height: 5px;
+      border-radius: 999px;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #8b5cf6;
+      cursor: pointer;
+      border: 2px solid #fff;
+    }
+  </style>
+</head>
+<body class="bg-void-950 text-slate-100 font-sans antialiased min-h-screen flex flex-col selection:bg-neon-violet selection:text-white">
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- Top Navigation Header -->
+  <header class="sticky top-0 z-40 glass-panel border-b border-white/10">
+    <div class="max-w-[1440px] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+      <!-- Brand Logo -->
+      <div class="flex items-center gap-3 cursor-pointer" onclick="switchView('studio')">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-neon-violet via-neon-indigo to-neon-emerald flex items-center justify-center shadow-lg shadow-violet-500/30">
+          <i data-lucide="scissors" class="w-5 h-5 text-white"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-display font-bold text-xl tracking-tight text-white">Void<span class="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-emerald-400">Cuts</span></span>
+            <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">Free Pro</span>
+          </div>
+          <p class="text-[11px] text-slate-400 hidden sm:block">AI Long-to-Viral Short Engine</p>
+        </div>
+      </div>
+
+      <!-- Main Navigation Tabs -->
+      <nav class="flex items-center bg-void-900/90 p-1 rounded-xl border border-white/10">
+        <button id="nav-studio" onclick="switchView('studio')" class="nav-btn flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all bg-violet-600 text-white shadow">
+          <i data-lucide="sparkles" class="w-4 h-4"></i>
+          <span>AI Studio</span>
+        </button>
+        <button id="nav-archive" onclick="switchView('archive')" class="nav-btn flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-slate-400 hover:text-white transition-all">
+          <i data-lucide="archive" class="w-4 h-4"></i>
+          <span>Archive</span>
+          <span id="archive-badge" class="px-1.5 py-0.2 text-[11px] rounded-full bg-white/10 text-slate-200">0</span>
+        </button>
+        <button id="nav-presets" onclick="switchView('presets')" class="nav-btn flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-slate-400 hover:text-white transition-all">
+          <i data-lucide="sliders" class="w-4 h-4"></i>
+          <span class="hidden sm:inline">Platform Presets</span>
+          <span class="sm:hidden">Presets</span>
+        </button>
+      </nav>
+
+      <!-- Right Quick Status -->
+      <div class="hidden md:flex items-center gap-3">
+        <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-void-850 border border-white/10 text-xs text-slate-300">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span>Unlimited AI Credits</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT AREA -->
+  <main class="flex-1 max-w-[1440px] w-full mx-auto px-4 sm:px-6 py-6">
+
+    <!-- ==================== VIEW 1: STUDIO ==================== -->
+    <section id="view-studio" class="space-y-6">
+
+      <!-- URL / Video Upload Hero Bar -->
+      <div class="glass-panel rounded-2xl p-4 sm:p-6 relative overflow-hidden">
+        <div class="absolute -top-24 -right-24 w-64 h-64 bg-violet-600/15 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-24 -left-24 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-4">
+          <div>
+            <h1 class="font-display text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+              Drop a Video Link or File — Get Viral Clips in Seconds
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-400 mt-0.5">
+              Auto-extracts highest-retention moments, generates magnetic hooks, 9:16 smart reframe, kinetic captions & viral stickers.
+            </p>
+          </div>
+          <!-- Quick Sample Links -->
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-[11px] uppercase tracking-wider text-slate-500 font-semibold">Try Demo Link:</span>
+            <button onclick="loadDemoLink('https://youtube.com/watch?v=x9p2_ai_wealth', 'How 1% Creators Automate Viral Shorts in 2026')" class="text-xs px-2.5 py-1 rounded-lg bg-void-800 hover:bg-violet-600/20 text-violet-300 border border-violet-500/30 transition">
+              🎙️ Podcast Clip
+            </button>
+            <button onclick="loadDemoLink('https://youtube.com/watch?v=k7m9_gaming_clutch', 'Insane 1v5 Clutch & Pro Mindset Breakdown')" class="text-xs px-2.5 py-1 rounded-lg bg-void-800 hover:bg-emerald-600/20 text-emerald-300 border border-emerald-500/30 transition">
+              🎮 Gaming / Stream
+            </button>
+          </div>
+        </div>
+
+        <!-- Input Bar -->
+        <div class="flex flex-col md:flex-row gap-3">
+          <div class="relative flex-1">
+            <div class="absolute inset-y-0 left-3.5 flex items-center pointer-events-none text-slate-400">
+              <i data-lucide="link-2" class="w-5 h-5 text-violet-400"></i>
+            </div>
+            <input
+              id="video-url-input"
+              type="text"
+              placeholder="Paste YouTube, Twitch, Kick, or Podcast video URL here..."
+              class="w-full pl-11 pr-24 py-3.5 rounded-xl bg-void-950/90 border border-white/15 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/25 outline-none text-sm text-white placeholder-slate-500 transition"
+            />
+            <button
+              onclick="pasteFromClipboard()"
+              class="absolute right-2.5 top-1/2 -translate-y-1/2 px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-slate-300 font-medium transition">
+              Paste
+            </button>
+          </div>
+
+          <!-- Upload Local Video Button -->
+          <label class="cursor-pointer flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-void-800 hover:bg-void-700 border border-white/15 text-sm font-medium text-slate-200 transition shrink-0">
+            <i data-lucide="upload-cloud" class="w-4 h-4 text-emerald-400"></i>
+            <span id="upload-label">Upload MP4/MOV</span>
+            <input id="local-video-input" type="file" accept="video/*" class="hidden" onchange="handleLocalFileUpload(event)" />
+          </label>
+
+          <!-- Generate CTA -->
+          <button
+            id="generate-btn"
+            onclick="startAIGeneration()"
+            class="px-6 py-3.5 rounded-xl bg-gradient-to-r from-violet-600 via-indigo-600 to-emerald-500 hover:brightness-110 active:scale-[0.99] text-white font-bold text-sm shadow-lg shadow-violet-600/30 flex items-center justify-center gap-2 transition shrink-0">
+            <i data-lucide="zap" class="w-4 h-4 fill-current"></i>
+            <span>Get Viral Clips</span>
+          </button>
+        </div>
+
+        <!-- Target Platform Quick Selector -->
+        <div class="mt-4 pt-3.5 border-t border-white/5 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-slate-400 font-medium">Target Format:</span>
+            <button onclick="setPlatformPreset('tiktok')" data-platform="tiktok" class="platform-pill px-3 py-1.5 rounded-lg bg-violet-600/25 border border-violet-500 text-white font-semibold flex items-center gap-1.5">
+              <span>🎵 TikTok (9:16)</span>
+            </button>
+            <button onclick="setPlatformPreset('reels')" data-platform="reels" class="platform-pill px-3 py-1.5 rounded-lg bg-void-850 border border-white/10 text-slate-300 hover:border-white/25 font-medium flex items-center gap-1.5">
+              <span>📸 Instagram Reels</span>
+            </button>
+            <button onclick="setPlatformPreset('shorts')" data-platform="shorts" class="platform-pill px-3 py-1.5 rounded-lg bg-void-850 border border-white/10 text-slate-300 hover:border-white/25 font-medium flex items-center gap-1.5">
+              <span>▶️ YouTube Shorts</span>
+            </button>
+          </div>
+          <div class="text-slate-400 flex items-center gap-2">
+            <i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i>
+            <span>Auto-saved to Archive • Zero Watermark</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI PROCESSING PIPELINE OVERLAY (Hidden by default) -->
+      <div id="processing-panel" class="hidden glass-panel rounded-2xl p-8 text-center border border-violet-500/30 neon-glow">
+        <div class="max-w-lg mx-auto space-y-5">
+          <div class="relative w-16 h-16 mx-auto flex items-center justify-center">
+            <div class="absolute inset-0 rounded-2xl bg-violet-500/30 animate-pulse-ring"></div>
+            <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-600 to-emerald-500 flex items-center justify-center shadow-xl">
+              <i data-lucide="cpu" class="w-8 h-8 text-white animate-pulse"></i>
+            </div>
+          </div>
+          <div>
+            <h2 id="proc-title" class="font-display text-xl font-bold text-white">Analyzing Video DNA & Audio Peaks...</h2>
+            <p id="proc-subtitle" class="text-xs text-slate-400 mt-1">Scanning emotional spikes, hook potential, and speaker framing</p>
+          </div>
+
+          <!-- Progress Bar -->
+          <div class="w-full bg-void-950 rounded-full h-3 p-0.5 border border-white/10 overflow-hidden">
+            <div id="proc-bar" class="h-full rounded-full bg-gradient-to-r from-violet-500 via-indigo-500 to-emerald-400 transition-all duration-300" style="width: 12%"></div>
+          </div>
+
+          <!-- Pipeline Steps -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-left text-[11px]">
+            <div id="step-1" class="p-2.5 rounded-xl bg-violet-500/15 border border-violet-500/40 text-violet-200 font-medium">
+              1. Transcript & Audio
+            </div>
+            <div id="step-2" class="p-2.5 rounded-xl bg-void-900 border border-white/10 text-slate-500">
+              2. Hook Detection
+            </div>
+            <div id="step-3" class="p-2.5 rounded-xl bg-void-900 border border-white/10 text-slate-500">
+              3. Smart 9:16 Crop
+            </div>
+            <div id="step-4" class="p-2.5 rounded-xl bg-void-900 border border-white/10 text-slate-500">
+              4. Virality Ranking
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- WORKSPACE: LEFT CLIP RANKING LIST + RIGHT 9:16 INTERACTIVE STUDIO -->
+      <div id="studio-workspace" class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+        <!-- LEFT COLUMN: AI RANKED CLIPS LIST (7 cols on lg) -->
+        <div class="lg:col-span-7 space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <div class="flex items-center gap-2">
+                <h2 class="font-display text-lg font-bold text-white">AI Ranked Viral Clips</h2>
+                <span id="clips-count-badge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-violet-500/20 text-violet-300 border border-violet-500/30">5 Clips</span>
+              </div>
+              <p id="active-project-title" class="text-xs text-slate-400 truncate max-w-md mt-0.5">Source: How 1% Creators Automate Viral Shorts in 2026</p>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <button onclick="sortClipsBy('score')" id="sort-score-btn" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/10 text-white">
+                🔥 Top Virality
+              </button>
+              <button onclick="sortClipsBy('time')" id="sort-time-btn" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-void-850 text-slate-400 hover:text-white">
+                ⏱️ Timeline Order
+              </button>
+            </div>
+          </div>
+
+          <!-- Clips Container -->
+          <div id="clips-list-container" class="space-y-3.5">
+            <!-- Dynamically populated clip cards -->
+          </div>
+        </div>
+
+        <!-- RIGHT COLUMN: 9:16 VERTICAL PREVIEW & VIRAL CUSTOMIZER (5 cols on lg) -->
+        <div class="lg:col-span-5 lg:sticky lg:top-20 space-y-4">
+          <div class="glass-panel rounded-2xl p-4 sm:p-5 border border-white/10">
+            <!-- Studio Top Header -->
+            <div class="flex items-center justify-between gap-2 pb-3 mb-4 border-b border-white/10">
+              <div class="flex items-center gap-2">
+                <span id="editor-rank-badge" class="px-2.5 py-1 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 text-void-950 font-black text-xs">#1 VIRAL PICK</span>
+                <span id="editor-score-badge" class="px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-bold text-xs">98/100 Score</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <button onclick="toggleSafeZone()" id="safezone-btn" title="Toggle TikTok/Reels UI Safe Zone" class="px-2.5 py-1 rounded-lg bg-void-800 hover:bg-void-700 text-xs text-slate-300 border border-white/10 flex items-center gap-1">
+                  <i data-lucide="smartphone" class="w-3.5 h-3.5 text-violet-400"></i>
+                  <span>Safe Zone</span>
+                </button>
+                <button onclick="toggleBookmarkCurrent()" id="bookmark-current-btn" title="Save Clip to Favorites" class="p-1.5 rounded-lg bg-void-800 hover:bg-void-700 text-slate-300 border border-white/10">
+                  <i data-lucide="bookmark" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- 9:16 VERTICAL PHONE CANVAS PREVIEW -->
+            <div class="flex justify-center">
+              <div id="phone-frame" class="relative w-[275px] sm:w-[295px] aspect-[9/16] rounded-[28px] bg-black border-[3px] border-void-700 shadow-2xl overflow-hidden select-none group">
+
+                <!-- Real Video Element (Shown when user uploads local file) -->
+                <video id="real-video-player" class="hidden absolute inset-0 w-full h-full object-cover" playsinline muted loop></video>
+
+                <!-- Dynamic Procedural Canvas (Shown for URL links & renders overlays) -->
+                <canvas id="preview-canvas" class="w-full h-full block"></canvas>
+
+                <!-- Split-Screen Gameplay Overlay Mode (Optional Toggle) -->
+                <div id="split-screen-badge" class="hidden absolute top-1/2 left-2 -translate-y-1/2 z-10 px-2 py-0.5 rounded bg-black/70 text-[10px] font-bold text-emerald-400 border border-emerald-500/40 pointer-events-none">
+                  SPLIT-SCREEN 9:16
+                </div>
+
+                <!-- TOP VIRAL HOOK BANNER OVERLAY -->
+                <div id="overlay-hook-box" class="absolute top-6 left-3 right-3 z-20 transition-all">
+                  <div class="bg-white text-void-950 px-3 py-2 rounded-xl shadow-xl border-2 border-void-950 text-center transform -rotate-1">
+                    <p id="overlay-hook-text" class="font-caption font-black text-xs sm:text-[13px] leading-tight uppercase tracking-tight">
+                      STOP SCROLLING IF YOU EDIT VIDEOS! 🚨
+                    </p>
+                  </div>
+                </div>
+
+                <!-- DRAGGABLE / ACTIVE VIRAL STICKER OVERLAY -->
+                <div id="overlay-sticker" class="absolute top-24 right-4 z-20 text-4xl drop-shadow-[0_6px_12px_rgba(0,0,0,0.85)] cursor-move transition-transform hover:scale-110" title="Click to cycle position">
+                  🔥
+                </div>
+
+                <!-- KINETIC AUTO-CAPTIONS OVERLAY -->
+                <div id="overlay-captions-box" class="absolute bottom-16 left-3 right-3 z-20 text-center pointer-events-none">
+                  <div id="overlay-caption-line" class="inline-block px-3 py-1.5 rounded-xl font-caption font-black text-base sm:text-lg uppercase tracking-wide leading-snug drop-shadow-[0_4px_10px_rgba(0,0,0,0.95)]">
+                    <!-- Dynamic synced words injected here -->
+                  </div>
+                </div>
+
+                <!-- SOCIAL PLATFORM SAFE-ZONE OVERLAY (TikTok/Reels UI simulation) -->
+                <div id="safe-zone-overlay" class="hidden absolute inset-0 z-30 pointer-events-none">
+                  <div class="absolute right-2.5 bottom-20 flex flex-col items-center gap-3 opacity-80">
+                    <div class="w-8 h-8 rounded-full bg-white/25 backdrop-blur flex items-center justify-center text-xs">❤️</div>
+                    <div class="w-8 h-8 rounded-full bg-white/25 backdrop-blur flex items-center justify-center text-xs">💬</div>
+                    <div class="w-8 h-8 rounded-full bg-white/25 backdrop-blur flex items-center justify-center text-xs">↗️</div>
+                  </div>
+                  <div class="absolute bottom-3 left-3 right-12 text-[10px] text-white/80 bg-black/40 p-1.5 rounded">
+                    @voidcuts_creator • #viral #shorts #ai
+                  </div>
+                </div>
+
+                <!-- Bottom Video Scrubber & Play/Pause Controls -->
+                <div class="absolute bottom-0 inset-x-0 z-30 bg-gradient-to-t from-black/95 via-black/60 to-transparent p-3 pt-6 flex items-center gap-2.5">
+                  <button onclick="togglePlayPause()" id="play-pause-btn" class="w-8 h-8 rounded-full bg-white text-void-950 flex items-center justify-center hover:scale-105 transition shrink-0">
+                    <i data-lucide="pause" class="w-4 h-4 fill-current"></i>
+                  </button>
+                  <div class="flex-1">
+                    <div class="w-full h-1.5 bg-white/20 rounded-full overflow-hidden cursor-pointer" onclick="seekPreview(event)">
+                      <div id="preview-progress" class="h-full bg-gradient-to-r from-violet-500 to-emerald-400 w-1/3"></div>
+                    </div>
+                    <div class="flex justify-between text-[10px] text-slate-300 mt-1 font-mono">
+                      <span id="preview-current-time">00:08</span>
+                      <span id="preview-duration">00:34</span>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- VIRAL ENHANCEMENT CONTROLS (Hook, Captions, Reframe, Stickers) -->
+            <div class="mt-5 space-y-3.5">
+
+              <!-- 1. Editable Viral Hook -->
+              <div class="bg-void-900/90 p-3 rounded-xl border border-white/10">
+                <div class="flex items-center justify-between mb-1.5">
+                  <label class="text-[11px] font-bold uppercase tracking-wider text-violet-300 flex items-center gap-1.5">
+                    <i data-lucide="flame" class="w-3.5 h-3.5 text-amber-400"></i>
+                    Viral Hook Banner
+                  </label>
+                  <label class="inline-flex items-center gap-1.5 cursor-pointer text-[11px] text-slate-400">
+                    <input id="toggle-hook-check" type="checkbox" checked onchange="updateOverlayVisibility()" class="accent-violet-500 rounded" />
+                    <span>Show</span>
+                  </label>
+                </div>
+                <input
+                  id="hook-text-input"
+                  type="text"
+                  oninput="updateHookText(this.value)"
+                  class="w-full px-3 py-1.5 rounded-lg bg-void-950 border border-white/10 focus:border-violet-500 outline-none text-xs text-white font-semibold"
+                />
+              </div>
+
+              <!-- 2. Smart Reframe & Caption Style -->
+              <div class="grid grid-cols-2 gap-2.5">
+                <div class="bg-void-900/90 p-2.5 rounded-xl border border-white/10">
+                  <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Smart Reframe (9:16)</label>
+                  <select id="reframe-mode-select" onchange="changeReframeMode(this.value)" class="w-full bg-void-950 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white outline-none">
+                    <option value="autotrack">🎯 AI Auto-Track (9:16)</option>
+                    <option value="split">🎮 Split-Screen Retention</option>
+                    <option value="fit">🖼️ Cinema Fit + Blur BG</option>
+                  </select>
+                </div>
+
+                <div class="bg-void-900/90 p-2.5 rounded-xl border border-white/10">
+                  <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Caption Style</label>
+                  <select id="caption-style-select" onchange="changeCaptionStyle(this.value)" class="w-full bg-void-950 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white outline-none">
+                    <option value="hormozi">⚡ Hormozi Pop (Yellow/Green)</option>
+                    <option value="neon">💜 Cyber Neon Glow</option>
+                    <option value="boldbox">⬛ High-Contrast Box</option>
+                    <option value="off">🚫 Captions Off</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- 3. Retention Stickers Bar -->
+              <div class="bg-void-900/90 p-2.5 rounded-xl border border-white/10">
+                <div class="flex items-center justify-between mb-1.5">
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Retention Stickers (Tap to apply)</span>
+                  <button onclick="cycleStickerPosition()" class="text-[10px] text-violet-400 hover:underline">Move Position</button>
+                </div>
+                <div class="flex items-center justify-between gap-1">
+                  <button onclick="setSticker('🔥')" class="sticker-btn flex-1 py-1.5 rounded-lg bg-void-950 hover:bg-white/10 text-base transition">🔥</button>
+                  <button onclick="setSticker('🤯')" class="sticker-btn flex-1 py-1.5 rounded-lg bg-void-950 hover:bg-white/10 text-base transition">🤯</button>
+                  <button onclick="setSticker('💰')" class="sticker-btn flex-1 py-1.5 rounded-lg bg-void-950 hover:bg-white/10 text-base transition">💰</button>
+                  <button onclick="setSticker('🚨')" class="sticker-btn flex-1 py-1.5 rounded-lg bg-void-950 hover:bg-white/10 text-base transition">🚨</button>
+                  <button onclick="setSticker('📈')" class="sticker-btn flex-1 py-1.5 rounded-lg bg-void-950 hover:bg-white/10 text-base transition">📈</button>
+                  <button onclick="setSticker('💯')" class="sticker-btn flex-1 py-1.5 rounded-lg bg-void-950 hover:bg-white/10 text-base transition">💯</button>
+                  <button onclick="setSticker('')" class="sticker-btn px-2 py-1.5 rounded-lg bg-void-950 hover:bg-rose-500/20 text-[10px] text-slate-400">Off</button>
+                </div>
+              </div>
+
+              <!-- 4. Export & Social Copy Actions -->
+              <div class="grid grid-cols-2 gap-2.5 pt-1">
+                <button
+                  onclick="copyViralMetadata()"
+                  class="py-3 px-3 rounded-xl bg-void-800 hover:bg-void-700 border border-white/15 text-xs font-bold text-white flex items-center justify-center gap-1.5 transition">
+                  <i data-lucide="copy" class="w-4 h-4 text-violet-400"></i>
+                  <span>Copy Hook & Tags</span>
+                </button>
+                <button
+                  id="export-clip-btn"
+                  onclick="exportSingleClip()"
+                  class="py-3 px-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:brightness-110 text-void-950 text-xs font-black flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-500/25 transition">
+                  <i data-lucide="download" class="w-4 h-4"></i>
+                  <span>Export 9:16 Clip</span>
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 2: ARCHIVE (PROCESSED LINKS & SAVED CLIPS) ==================== -->
+    <section id="view-archive" class="hidden space-y-6">
+      <div class="glass-panel rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 class="font-display text-2xl font-bold text-white flex items-center gap-2">
+            <i data-lucide="history" class="w-6 h-6 text-violet-400"></i>
+            <span>Link & Clip Archive</span>
+          </h2>
+          <p class="text-sm text-slate-400 mt-1">Every video URL and file you process is saved here automatically so you can revisit and export clips anytime.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <input
+            id="archive-search"
+            type="text"
+            oninput="renderArchive()"
+            placeholder="Search saved links or hooks..."
+            class="px-3.5 py-2 rounded-xl bg-void-950 border border-white/15 text-xs text-white placeholder-slate-500 outline-none focus:border-violet-500"
+          />
+          <button onclick="clearArchive()" class="px-3.5 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 text-xs font-semibold transition">
+            Clear History
+          </button>
+        </div>
+      </div>
+
+      <!-- Archive Grid -->
+      <div id="archive-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <!-- Populated dynamically from localStorage -->
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 3: SOCIAL MEDIA PRESETS ==================== -->
+    <section id="view-presets" class="hidden space-y-6">
+      <div class="glass-panel rounded-2xl p-6">
+        <h2 class="font-display text-2xl font-bold text-white mb-1">Social Media Export Presets</h2>
+        <p class="text-sm text-slate-400 mb-6">Configure default aspect ratios, frame rates, and safe zones for TikTok, Instagram Reels, and YouTube Shorts.</p>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <!-- TikTok Card -->
+          <div class="p-5 rounded-2xl bg-void-900 border border-violet-500/40 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-lg font-bold text-white">🎵 TikTok Viral</span>
+              <span class="px-2 py-0.5 rounded bg-violet-500/20 text-violet-300 text-[11px] font-bold">1080×1920</span>
+            </div>
+            <p class="text-xs text-slate-400">Optimized for For You Page retention with top hook banner & high-contrast center captions avoiding right-side icons.</p>
+            <ul class="text-xs text-slate-300 space-y-1.5 pt-2 border-t border-white/5">
+              <li>• Resolution: 1080p Vertical (9:16)</li>
+              <li>• Frame Rate: 60 FPS Smooth</li>
+              <li>• Caption Zone: Center-Lower Safe</li>
+            </ul>
+            <button onclick="setPlatformPreset('tiktok'); switchView('studio');" class="w-full py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold transition">
+              Apply TikTok Preset
+            </button>
+          </div>
+
+          <!-- Instagram Reels Card -->
+          <div class="p-5 rounded-2xl bg-void-900 border border-white/10 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-lg font-bold text-white">📸 Instagram Reels</span>
+              <span class="px-2 py-0.5 rounded bg-pink-500/20 text-pink-300 text-[11px] font-bold">1080×1920</span>
+            </div>
+            <p class="text-xs text-slate-400">Balanced 4:5 grid-preview safe framing so your cover hook looks clean on your profile grid and full-screen Reels.</p>
+            <ul class="text-xs text-slate-300 space-y-1.5 pt-2 border-t border-white/5">
+              <li>• Resolution: 1080p Vertical (9:16)</li>
+              <li>• Grid Cover Safe: Enabled</li>
+              <li>• Bitrate: High Retention VBR</li>
+            </ul>
+            <button onclick="setPlatformPreset('reels'); switchView('studio');" class="w-full py-2.5 rounded-xl bg-void-800 hover:bg-void-700 text-white text-xs font-bold transition">
+              Apply Reels Preset
+            </button>
+          </div>
+
+          <!-- YouTube Shorts Card -->
+          <div class="p-5 rounded-2xl bg-void-900 border border-white/10 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-lg font-bold text-white">▶️ YouTube Shorts</span>
+              <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[11px] font-bold">1080×1920</span>
+            </div>
+            <p class="text-xs text-slate-400">Loop-ready pacing with punchy 3-second opening hook and crisp bold typography for mobile viewers.</p>
+            <ul class="text-xs text-slate-300 space-y-1.5 pt-2 border-t border-white/5">
+              <li>• Resolution: 1080p Vertical (9:16)</li>
+              <li>• Max Duration: 59 Seconds</li>
+              <li>• Loop Optimization: Active</li>
+            </ul>
+            <button onclick="setPlatformPreset('shorts'); switchView('studio');" class="w-full py-2.5 rounded-xl bg-void-800 hover:bg-void-700 text-white text-xs font-bold transition">
+              Apply Shorts Preset
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- APPLICATION LOGIC -->
+  <script>
+    // =========================================================================
+    // 1. STATE MANAGEMENT & PERSISTENT ARCHIVE
+    // =========================================================================
+    const ARCHIVE_STORAGE_KEY = 'voidcuts_archive_v1';
+
+    let appState = {
+      currentView: 'studio',
+      activePlatform: 'tiktok',
+      currentProject: null,
+      selectedClipIndex: 0,
+      sortBy: 'score',
+      isPlaying: true,
+      reframeMode: 'autotrack',
+      captionStyle: 'hormozi',
+      showSafeZone: false,
+      sticker: '🔥',
+      stickerPosIndex: 0,
+      localVideoUrl: null,
+      currentTime: 0,
+      archive: []
+    };
+
+    const stickerPositions = [
+      'top-24 right-4',
+      'top-24 left-4',
+      'bottom-32 right-4',
+      'bottom-32 left-4'
+    ];
+
+    // Pre-seeded realistic project generator based on link/title
+    function generateClipsForSource(sourceTitle, url) {
+      const cleanTopic = sourceTitle || 'Viral Creator Strategy';
+      return [
+        {
+          id: 'clip-' + Date.now() + '-1',
+          rank: 1,
+          score: 98,
+          metrics: { hook: 99, pacing: 97, retention: 98 },
+          hook: 'NOBODY TALKS ABOUT THIS HIDDEN TRICK! 🚨',
+          title: `${cleanTopic} — The 3-Second Hook Secret`,
+          startTime: '01:14',
+          endTime: '01:48',
+          durationSec: 34,
+          reason: 'Massive vocal energy spike + contrarian opening statement within first 2.5 seconds.',
+          hashtags: '#viral #contentcreator #growthhacks #shorts #fyp',
+          bookmarked: true,
+          accentColor: '#8b5cf6',
+          captions: [
+            { start: 0, end: 3, words: ['MOST', 'CREATORS', 'WASTE', 'HOURS', 'EDITING'] },
+            { start: 3, end: 6, words: ['WHEN', 'ALL', 'YOU', 'NEED', 'IS', 'THIS', 'HOOK'] },
+            { start: 6, end: 10, words: ['WATCH', 'HOW', 'RETENTION', 'JUMPS', 'TO', '98%'] },
+            { start: 10, end: 14, words: ['SAVE', 'THIS', 'BEFORE', 'IT', 'GETS', 'PATCHED!'] }
+          ]
+        },
+        {
+          id: 'clip-' + Date.now() + '-2',
+          rank: 2,
+          score: 94,
+          metrics: { hook: 95, pacing: 93, retention: 94 },
+          hook: 'STOP MAKING THIS ROOKIE MISTAKE ❌',
+          title: 'Why 99% Fail in the First 3 Seconds',
+          startTime: '04:22',
+          endTime: '04:51',
+          durationSec: 29,
+          reason: 'Strong emotional contrast and fast rhythmic cadence ideal for TikTok & Reels.',
+          hashtags: '#mindset #success #viralshorts #reels #tips',
+          bookmarked: false,
+          accentColor: '#10b981',
+          captions: [
+            { start: 0, end: 3, words: ['IF', 'PEOPLE', 'SWIPE', 'AWAY', 'IMMEDIATELY'] },
+            { start: 3, end: 6, words: ['YOUR', 'FIRST', 'FRAME', 'HAS', 'ZERO', 'TENSION'] },
+            { start: 6, end: 10, words: ['CHANGE', 'THIS', 'ONE', 'THING', 'TODAY'] },
+            { start: 10, end: 14, words: ['AND', 'WATCH', 'YOUR', 'VIEWS', 'EXPLODE'] }
+          ]
+        },
+        {
+          id: 'clip-' + Date.now() + '-3',
+          rank: 3,
+          score: 91,
+          metrics: { hook: 90, pacing: 92, retention: 91 },
+          hook: 'THIS CHANGED EVERYTHING FOR ME 🤯',
+          title: 'The Exact Blueprint Revealed Step-by-Step',
+          startTime: '08:05',
+          endTime: '08:45',
+          durationSec: 40,
+          reason: 'High curiosity loop with actionable takeaway that drives shares and bookmarks.',
+          hashtags: '#aitools #productivity #creators #youtubeshorts',
+          bookmarked: false,
+          accentColor: '#6366f1',
+          captions: [
+            { start: 0, end: 3, words: ['I', 'TESTED', 'EVERY', 'SINGLE', 'TOOL'] },
+            { start: 3, end: 6, words: ['AND', 'THIS', 'WORKFLOW', 'BEAT', 'THEM', 'ALL'] },
+            { start: 6, end: 10, words: ['ZERO', 'BUDGET', 'NEEDED', 'TO', 'START'] },
+            { start: 10, end: 14, words: ['TRY', 'IT', 'ON', 'YOUR', 'NEXT', 'POST'] }
+          ]
+        },
+        {
+          id: 'clip-' + Date.now() + '-4',
+          rank: 4,
+          score: 87,
+          metrics: { hook: 86, pacing: 89, retention: 86 },
+          hook: 'WAIT UNTIL THE END FOR THE TWIST 👀',
+          title: 'Unpopular Opinion That Sparked Debate',
+          startTime: '12:40',
+          endTime: '13:08',
+          durationSec: 28,
+          reason: 'Comment-bait ending triggers high engagement velocity in the algorithm.',
+          hashtags: '#trending #debate #podcastclips #shorts',
+          bookmarked: false,
+          accentColor: '#f59e0b',
+          captions: [
+            { start: 0, end: 3, words: ['EVERYONE', 'SAYS', 'QUALITY', 'IS', 'ENOUGH'] },
+            { start: 3, end: 6, words: ['THAT', 'IS', 'COMPLETELY', 'FALSE', 'IN', '2026'] },
+            { start: 6, end: 10, words: ['PACKAGING', 'AND', 'PACING', 'WIN', 'EVERY', 'TIME'] },
+            { start: 10, end: 14, words: ['DO', 'YOU', 'AGREE', 'OR', 'DISAGREE?'] }
+          ]
+        },
+        {
+          id: 'clip-' + Date.now() + '-5',
+          rank: 5,
+          score: 83,
+          metrics: { hook: 84, pacing: 82, retention: 83 },
+          hook: '3 RULES I NEVER BREAK 📈',
+          title: 'Rapid-Fire Cheat Sheet for Beginners',
+          startTime: '16:10',
+          endTime: '16:36',
+          durationSec: 26,
+          reason: 'Structured list format yields high completion rate.',
+          hashtags: '#cheatsheet #growth #viral #tiktoktips',
+          bookmarked: false,
+          accentColor: '#ec4899',
+          captions: [
+            { start: 0, end: 3, words: ['RULE', 'NUMBER', 'ONE:', 'HOOK', 'FAST'] },
+            { start: 3, end: 6, words: ['RULE', 'NUMBER', 'TWO:', 'CUT', 'ALL', 'SILENCE'] },
+            { start: 6, end: 10, words: ['RULE', 'THREE:', 'ADD', 'DYNAMIC', 'CAPTIONS'] },
+            { start: 10, end: 14, words: ['FOLLOW', 'FOR', 'MORE', 'SECRETS!'] }
+          ]
+        }
+      ];
+    }
+
+    // Load initial archive from localStorage or seed default items
+    function initArchive() {
+      try {
+        const saved = localStorage.getItem(ARCHIVE_STORAGE_KEY);
+        if (saved) {
+          appState.archive = JSON.parse(saved);
+        }
+      } catch (e) {
+        console.warn('Could not read localStorage', e);
+      }
+
+      if (!appState.archive || appState.archive.length === 0) {
+        const defaultUrl = 'https://youtube.com/watch?v=x9p2_ai_wealth';
+        const defaultTitle = 'How 1% Creators Automate Viral Shorts in 2026';
+        const starterProject = {
+          id: 'proj-starter-1',
+          url: defaultUrl,
+          title: defaultTitle,
+          sourceType: 'YouTube URL',
+          createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+          platform: 'tiktok',
+          clips: generateClipsForSource(defaultTitle, defaultUrl)
+        };
+        appState.archive = [starterProject];
+        saveArchive();
+      }
+
+      appState.currentProject = appState.archive[0];
+      updateArchiveBadge();
+    }
+
+    function saveArchive() {
+      try {
+        localStorage.setItem(ARCHIVE_STORAGE_KEY, JSON.stringify(appState.archive));
+      } catch (e) {
+        console.warn('Storage full or restricted', e);
+      }
+      updateArchiveBadge();
+    }
+
+    function updateArchiveBadge() {
+      const badge = document.getElementById('archive-badge');
+      if (badge) badge.textContent = appState.archive.length;
+    }
+
+    // =========================================================================
+    // 2. NAVIGATION & UI VIEW SWITCHING
+    // =========================================================================
+    function switchView(viewName) {
+      appState.currentView = viewName;
+      ['studio', 'archive', 'presets'].forEach(v => {
+        document.getElementById(`view-${v}`).classList.toggle('hidden', v !== viewName);
+        const btn = document.getElementById(`nav-${v}`);
+        if (v === viewName) {
+          btn.classList.add('bg-violet-600', 'text-white', 'shadow');
+          btn.classList.remove('text-slate-400');
+        } else {
+          btn.classList.remove('bg-violet-600', 'text-white', 'shadow');
+          btn.classList.add('text-slate-400');
+        }
+      });
+
+      if (viewName === 'archive') {
+        renderArchive();
+      }
+      lucide.createIcons();
+    }
+
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      const borderClass = type === 'success' ? 'border-emerald-500/40 text-emerald-300' : 'border-violet-500/40 text-violet-200';
+      toast.className = `pointer-events-auto glass-panel px-4 py-3 rounded-xl border ${borderClass} shadow-2xl text-xs font-semibold flex items-center gap-2.5 transform transition-all duration-300 translate-y-2 opacity-0`;
+      toast.innerHTML = `<i data-lucide="${type === 'success' ? 'check-circle-2' : 'sparkles'}" class="w-4 h-4 shrink-0"></i><span>${message}</span>`;
+      container.appendChild(toast);
+      lucide.createIcons();
+
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      });
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    // =========================================================================
+    // 3. LINK / FILE INPUT & AI PROCESSING PIPELINE
+    // =========================================================================
+    function loadDemoLink(url, title) {
+      document.getElementById('video-url-input').value = url;
+      appState.localVideoUrl = null;
+      document.getElementById('upload-label').textContent = 'Upload MP4/MOV';
+      startAIGeneration(title);
+    }
+
+    async function pasteFromClipboard() {
+      try {
+        const text = await navigator.clipboard.readText();
+        if (text) {
+          document.getElementById('video-url-input').value = text;
+          showToast('Link pasted from clipboard!');
+        }
+      } catch (e) {
+        document.getElementById('video-url-input').focus();
+        showToast('Press Ctrl+V / Paste your link in the box', 'info');
+      }
+    }
+
+    function handleLocalFileUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const objectUrl = URL.createObjectURL(file);
+      appState.localVideoUrl = objectUrl;
+      const cleanName = file.name.replace(/\.[^/.]+$/, '');
+      document.getElementById('video-url-input').value = `local://${file.name}`;
+      document.getElementById('upload-label').textContent = cleanName.slice(0, 14) + '...';
+      showToast(`Loaded "${file.name}" — Ready for AI clipping!`);
+      startAIGeneration(cleanName);
+    }
+
+    function extractReadableTitleFromUrl(url) {
+      if (url.startsWith('local://')) return url.replace('local://', '');
+      try {
+        const u = new URL(url);
+        if (u.hostname.includes('youtube') || u.hostname.includes('youtu.be')) {
+          return 'YouTube Viral Breakdown (' + (u.searchParams.get('v') || 'HD') + ')';
+        }
+        return 'Web Video Highlights — ' + u.hostname;
+      } catch {
+        return url.slice(0, 36) || 'Custom Video Session';
+      }
+    }
+
+    function startAIGeneration(overrideTitle = null) {
+      const inputVal = document.getElementById('video-url-input').value.trim();
+      if (!inputVal && !appState.localVideoUrl) {
+        showToast('Paste a video URL or upload a video file first!', 'info');
+        document.getElementById('video-url-input').focus();
+        return;
+      }
+
+      const procPanel = document.getElementById('processing-panel');
+      const workspace = document.getElementById('studio-workspace');
+      const bar = document.getElementById('proc-bar');
+      const procTitle = document.getElementById('proc-title');
+      const procSub = document.getElementById('proc-subtitle');
+
+      procPanel.classList.remove('hidden');
+      workspace.classList.add('opacity-40', 'pointer-events-none');
+
+      const steps = [
+        { pct: 28, title: 'Extracting Audio & Word-Level Transcript...', sub: 'Whisper-Turbo speech alignment active', stepEl: 'step-1' },
+        { pct: 56, title: 'Detecting Viral Hooks & Retention Spikes...', sub: 'Scoring emotional peaks & curiosity gaps', stepEl: 'step-2' },
+        { pct: 82, title: 'Applying Smart 9:16 Speaker Reframing...', sub: 'Tracking active speaker & generating kinetic captions', stepEl: 'step-3' },
+        { pct: 100, title: 'Finalizing Virality Scores & Ranking...', sub: 'Sorting top clips for ' + appState.activePlatform.toUpperCase(), stepEl: 'step-4' }
+      ];
+
+      let idx = 0;
+      const interval = setInterval(() => {
+        if (idx < steps.length) {
+          const s = steps[idx];
+          bar.style.width = s.pct + '%';
+          procTitle.textContent = s.title;
+          procSub.textContent = s.sub;
+          const el = document.getElementById(s.stepEl);
+          el.className = 'p-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 font-semibold';
+          idx++;
+        } else {
+          clearInterval(interval);
+          finalizeProjectGeneration(inputVal, overrideTitle);
+          procPanel.classList.add('hidden');
+          workspace.classList.remove('opacity-40', 'pointer-events-none');
+          // Reset step styles for next run
+          ['step-2', 'step-3', 'step-4'].forEach(id => {
+            document.getElementById(id).className = 'p-2.5 rounded-xl bg-void-900 border border-white/10 text-slate-500';
+          });
+          bar.style.width = '12%';
+        }
+      }, 480);
+    }
+
+    function finalizeProjectGeneration(url, overrideTitle) {
+      const title = overrideTitle || extractReadableTitleFromUrl(url);
+      const newProject = {
+        id: 'proj-' + Date.now(),
+        url: url || 'Uploaded Local Video',
+        title: title,
+        sourceType: appState.localVideoUrl ? 'Local File' : 'Video Link',
+        createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+        platform: appState.activePlatform,
+        clips: generateClipsForSource(title, url)
+      };
+
+      // Add to top of Archive & save
+      appState.archive.unshift(newProject);
+      saveArchive();
+
+      appState.currentProject = newProject;
+      appState.selectedClipIndex = 0;
+      renderClipsList();
+      selectClip(0);
+      showToast(`Generated 5 viral clips & saved link to Archive!`);
+    }
+
+    // =========================================================================
+    // 4. CLIPS LIST RENDERING & SELECTION
+    // =========================================================================
+    function renderClipsList() {
+      const container = document.getElementById('clips-list-container');
+      const proj = appState.currentProject;
+      if (!proj) return;
+
+      document.getElementById('active-project-title').textContent = `Source: ${proj.title}`;
+      document.getElementById('clips-count-badge').textContent = `${proj.clips.length} Viral Clips`;
+
+      let clips = [...proj.clips];
+      if (appState.sortBy === 'score') {
+        clips.sort((a, b) => b.score - a.score);
+      } else {
+        clips.sort((a, b) => a.startTime.localeCompare(b.startTime));
+      }
+
+      container.innerHTML = clips.map((clip) => {
+        const realIdx = proj.clips.findIndex(c => c.id === clip.id);
+        const isSelected = realIdx === appState.selectedClipIndex;
+        const scoreColor = clip.score >= 95 ? 'text-emerald-400 bg-emerald-500/15 border-emerald-500/30'
+                         : clip.score >= 90 ? 'text-violet-300 bg-violet-500/15 border-violet-500/30'
+                         : 'text-amber-300 bg-amber-500/15 border-amber-500/30';
+
+        return `
+          <div
+            onclick="selectClip(${realIdx})"
+            class="cursor-pointer rounded-2xl p-4 transition-all border ${isSelected ? 'glass-panel border-violet-500 neon-glow' : 'bg-void-900/75 hover:bg-void-850 border-white/10'}">
+            <div class="flex flex-wrap items-start justify-between gap-2 mb-2.5">
+              <div class="flex items-center gap-2">
+                <span class="px-2.5 py-0.5 rounded-lg text-xs font-black ${clip.rank === 1 ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-void-950' : 'bg-white/10 text-white'}">
+                  #${clip.rank}
+                </span>
+                <span class="px-2.5 py-0.5 rounded-lg text-xs font-bold border ${scoreColor}">
+                  ⚡ ${clip.score}/100 Virality
+                </span>
+                <span class="text-xs font-mono text-slate-400 bg-void-950 px-2 py-0.5 rounded border border-white/5">
+                  ${clip.startTime} - ${clip.endTime} (${clip.durationSec}s)
+                </span>
+              </div>
+
+              <div class="flex items-center gap-1.5">
+                <button onclick="event.stopPropagation(); toggleClipBookmark(${realIdx})" class="p-1.5 rounded-lg hover:bg-white/10 ${clip.bookmarked ? 'text-amber-400' : 'text-slate-500'}" title="Save Clip">
+                  <i data-lucide="bookmark" class="w-4 h-4 ${clip.bookmarked ? 'fill-current' : ''}"></i>
+                </button>
+                <button onclick="event.stopPropagation(); selectClip(${realIdx}); exportSingleClip();" class="px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-[11px] font-bold flex items-center gap-1">
+                  <i data-lucide="download" class="w-3 h-3"></i>
+                  <span>Save</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Hook Highlight -->
+            <div class="mb-2 px-3 py-1.5 rounded-xl bg-void-950/90 border border-white/5 flex items-center justify-between gap-2">
+              <span class="text-xs font-bold text-amber-300 truncate">🪝 Hook: "${clip.hook}"</span>
+              <span class="text-[10px] text-slate-400 shrink-0">Edit in Studio →</span>
+            </div>
+
+            <h3 class="text-sm font-bold text-white mb-1">${clip.title}</h3>
+            <p class="text-xs text-slate-400 leading-relaxed mb-3">${clip.reason}</p>
+
+            <!-- Score Breakdown Bars -->
+            <div class="grid grid-cols-3 gap-2 pt-2.5 border-t border-white/5 text-[11px]">
+              <div>
+                <div class="flex justify-between text-slate-400 mb-1"><span>Hook</span><span class="text-white font-semibold">${clip.metrics.hook}%</span></div>
+                <div class="h-1 bg-void-950 rounded-full overflow-hidden"><div class="h-full bg-violet-500" style="width:${clip.metrics.hook}%"></div></div>
+              </div>
+              <div>
+                <div class="flex justify-between text-slate-400 mb-1"><span>Pacing</span><span class="text-white font-semibold">${clip.metrics.pacing}%</span></div>
+                <div class="h-1 bg-void-950 rounded-full overflow-hidden"><div class="h-full bg-indigo-500" style="width:${clip.metrics.pacing}%"></div></div>
+              </div>
+              <div>
+                <div class="flex justify-between text-slate-400 mb-1"><span>Retention</span><span class="text-white font-semibold">${clip.metrics.retention}%</span></div>
+                <div class="h-1 bg-void-950 rounded-full overflow-hidden"><div class="h-full bg-emerald-400" style="width:${clip.metrics.retention}%"></div></div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      lucide.createIcons();
+    }
+
+    function sortClipsBy(criteria) {
+      appState.sortBy = criteria;
+      document.getElementById('sort-score-btn').className = criteria === 'score'
+        ? 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/10 text-white'
+        : 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-void-850 text-slate-400 hover:text-white';
+      document.getElementById('sort-time-btn').className = criteria === 'time'
+        ? 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/10 text-white'
+        : 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-void-850 text-slate-400 hover:text-white';
+      renderClipsList();
+    }
+
+    function selectClip(index) {
+      const proj = appState.currentProject;
+      if (!proj || !proj.clips[index]) return;
+
+      appState.selectedClipIndex = index;
+      appState.currentTime = 0;
+      const clip = proj.clips[index];
+
+      // Update Editor Header Badges
+      document.getElementById('editor-rank-badge').textContent = `#${clip.rank} VIRAL PICK`;
+      document.getElementById('editor-score-badge').textContent = `${clip.score}/100 Score`;
+      document.getElementById('preview-duration').textContent = `00:${String(clip.durationSec).padStart(2, '0')}`;
+
+      // Sync Hook Input & Overlay
+      document.getElementById('hook-text-input').value = clip.hook;
+      document.getElementById('overlay-hook-text').textContent = clip.hook;
+
+      // Update Bookmark Icon
+      const bmBtn = document.getElementById('bookmark-current-btn');
+      bmBtn.innerHTML = `<i data-lucide="bookmark" class="w-4 h-4 ${clip.bookmarked ? 'text-amber-400 fill-current' : ''}"></i>`;
+
+      // Handle Real Local Video vs Canvas Simulation
+      const videoEl = document.getElementById('real-video-player');
+      const canvasEl = document.getElementById('preview-canvas');
+      if (appState.localVideoUrl) {
+        videoEl.src = appState.localVideoUrl;
+        videoEl.classList.remove('hidden');
+        canvasEl.classList.add('hidden');
+        videoEl.play().catch(() => {});
+      } else {
+        videoEl.classList.add('hidden');
+        canvasEl.classList.remove('hidden');
+      }
+
+      renderClipsList();
+      lucide.createIcons();
+    }
+
+    function toggleClipBookmark(index) {
+      const clip = appState.currentProject.clips[index];
+      clip.bookmarked = !clip.bookmarked;
+      saveArchive();
+      renderClipsList();
+      if (index === appState.selectedClipIndex) {
+        selectClip(index);
+      }
+      showToast(clip.bookmarked ? 'Clip bookmarked!' : 'Removed from bookmarks');
+    }
+
+    function toggleBookmarkCurrent() {
+      toggleClipBookmark(appState.selectedClipIndex);
+    }
+
+    // =========================================================================
+    // 5. INTERACTIVE 9:16 STUDIO CONTROLS & LIVE ANIMATION LOOP
+    // =========================================================================
+    function updateHookText(val) {
+      const clip = appState.currentProject.clips[appState.selectedClipIndex];
+      clip.hook = val;
+      document.getElementById('overlay-hook-text').textContent = val || 'VIRAL CLIP';
+      saveArchive();
+    }
+
+    function updateOverlayVisibility() {
+      const showHook = document.getElementById('toggle-hook-check').checked;
+      document.getElementById('overlay-hook-box').classList.toggle('hidden', !showHook);
+    }
+
+    function changeReframeMode(mode) {
+      appState.reframeMode = mode;
+      const badge = document.getElementById('split-screen-badge');
+      const videoEl = document.getElementById('real-video-player');
+      badge.classList.toggle('hidden', mode !== 'split');
+
+      if (mode === 'fit') {
+        videoEl.classList.remove('object-cover');
+        videoEl.classList.add('object-contain');
+      } else {
+        videoEl.classList.add('object-cover');
+        videoEl.classList.remove('object-contain');
+      }
+      showToast(`Reframe mode: ${mode.toUpperCase()}`);
+    }
+
+    function changeCaptionStyle(style) {
+      appState.captionStyle = style;
+      document.getElementById('overlay-captions-box').classList.toggle('hidden', style === 'off');
+    }
+
+    function setSticker(emoji) {
+      appState.sticker = emoji;
+      const el = document.getElementById('overlay-sticker');
+      if (!emoji) {
+        el.classList.add('hidden');
+      } else {
+        el.classList.remove('hidden');
+        el.textContent = emoji;
+      }
+    }
+
+    function cycleStickerPosition() {
+      const el = document.getElementById('overlay-sticker');
+      el.classList.remove(...stickerPositions[appState.stickerPosIndex].split(' '));
+      appState.stickerPosIndex = (appState.stickerPosIndex + 1) % stickerPositions.length;
+      el.classList.add(...stickerPositions[appState.stickerPosIndex].split(' '));
+    }
+
+    function toggleSafeZone() {
+      appState.showSafeZone = !appState.showSafeZone;
+      document.getElementById('safe-zone-overlay').classList.toggle('hidden', !appState.showSafeZone);
+    }
+
+    function setPlatformPreset(platform) {
+      appState.activePlatform = platform;
+      document.querySelectorAll('.platform-pill').forEach(btn => {
+        const active = btn.dataset.platform === platform;
+        btn.className = active
+          ? 'platform-pill px-3 py-1.5 rounded-lg bg-violet-600/25 border border-violet-500 text-white font-semibold flex items-center gap-1.5'
+          : 'platform-pill px-3 py-1.5 rounded-lg bg-void-850 border border-white/10 text-slate-300 hover:border-white/25 font-medium flex items-center gap-1.5';
+      });
+      showToast(`Target platform set to ${platform.toUpperCase()} (9:16)`);
+    }
+
+    function togglePlayPause() {
+      appState.isPlaying = !appState.isPlaying;
+      const btn = document.getElementById('play-pause-btn');
+      const videoEl = document.getElementById('real-video-player');
+      btn.innerHTML = `<i data-lucide="${appState.isPlaying ? 'pause' : 'play'}" class="w-4 h-4 fill-current"></i>`;
+      if (appState.localVideoUrl) {
+        appState.isPlaying ? videoEl.play() : videoEl.pause();
+      }
+      lucide.createIcons();
+    }
+
+    function seekPreview(e) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      const clip = appState.currentProject.clips[appState.selectedClipIndex];
+      appState.currentTime = ratio * clip.durationSec;
+    }
+
+    // Dynamic 9:16 Canvas Renderer + Synced Kinetic Captions Engine
+    let lastFrameTime = performance.now();
+    function renderPreviewLoop(now) {
+      const dt = (now - lastFrameTime) / 1000;
+      lastFrameTime = now;
+
+      const proj = appState.currentProject;
+      if (proj && proj.clips[appState.selectedClipIndex]) {
+        const clip = proj.clips[appState.selectedClipIndex];
+
+        if (appState.isPlaying) {
+          appState.currentTime += dt;
+          if (appState.currentTime >= clip.durationSec) {
+            appState.currentTime = 0;
+          }
+        }
+
+        // Update Progress UI
+        const pct = (appState.currentTime / clip.durationSec) * 100;
+        document.getElementById('preview-progress').style.width = `${pct}%`;
+        document.getElementById('preview-current-time').textContent = `00:${String(Math.floor(appState.currentTime)).padStart(2, '0')}`;
+
+        // Update Kinetic Synced Captions
+        updateKineticCaptions(clip, appState.currentTime);
+
+        // Draw Simulated 9:16 Visual Feed on Canvas (for URL links or export)
+        drawProceduralCanvas(clip, now / 1000);
+      }
+
+      requestAnimationFrame(renderPreviewLoop);
+    }
+
+    let lastCaptionKey = '';
+    function updateKineticCaptions(clip, t) {
+      if (appState.captionStyle === 'off') return;
+      const loopT = t % 14;
+      const line = clip.captions.find(c => loopT >= c.start && loopT < c.end) || clip.captions[0];
+      const wordProgress = (loopT - line.start) / (line.end - line.start);
+      const activeWordIdx = Math.min(line.words.length - 1, Math.floor(wordProgress * line.words.length));
+
+      const key = `${line.start}-${activeWordIdx}-${appState.captionStyle}`;
+      if (key === lastCaptionKey) return;
+      lastCaptionKey = key;
+
+      const container = document.getElementById('overlay-caption-line');
+      if (appState.captionStyle === 'boldbox') {
+        container.className = 'inline-block px-3 py-1.5 rounded-xl bg-black/85 border border-white/15 font-caption font-black text-base uppercase tracking-wide leading-snug';
+      } else {
+        container.className = 'inline-block px-2 py-1 font-caption font-black text-lg uppercase tracking-wide leading-snug drop-shadow-[0_4px_10px_rgba(0,0,0,0.98)]';
+      }
+
+      container.innerHTML = line.words.map((w, idx) => {
+        if (idx === activeWordIdx) {
+          if (appState.captionStyle === 'neon') {
+            return `<span class="word-pop text-violet-300 bg-violet-600/60 px-1.5 rounded-md mx-0.5">${w}</span>`;
+          }
+          return `<span class="word-pop text-amber-300 scale-110 mx-0.5">${w}</span>`;
+        }
+        return `<span class="text-white mx-0.5">${w}</span>`;
+      }).join(' ');
+    }
+
+    function drawProceduralCanvas(clip, timeSec) {
+      const canvas = document.getElementById('preview-canvas');
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return;
+
+      if (canvas.width !== Math.floor(rect.width * 2) || canvas.height !== Math.floor(rect.height * 2)) {
+        canvas.width = Math.floor(rect.width * 2);
+        canvas.height = Math.floor(rect.height * 2);
+      }
+
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width;
+      const h = canvas.height;
+
+      // Rich dynamic gradient background
+      const grad = ctx.createLinearGradient(0, 0, w, h);
+      grad.addColorStop(0, '#0f0c29');
+      grad.addColorStop(0.5, '#1e1b4b');
+      grad.addColorStop(1, '#090d16');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, w, h);
+
+      // Animated ambient glow orb (simulating speaker tracking focus)
+      const orbX = w * 0.5 + Math.sin(timeSec * 1.4) * (w * 0.14);
+      const orbY = appState.reframeMode === 'split' ? h * 0.28 : h * 0.44;
+      const radGrad = ctx.createRadialGradient(orbX, orbY, 10, orbX, orbY, w * 0.55);
+      radGrad.addColorStop(0, clip.accentColor + '66');
+      radGrad.addColorStop(1, 'transparent');
+      ctx.fillStyle = radGrad;
+      ctx.fillRect(0, 0, w, h);
+
+      // Speaker Focus Frame / Split-Screen Simulation
+      if (appState.reframeMode === 'split') {
+        // Top half: Speaker silhouette + waveform
+        ctx.fillStyle = 'rgba(255,255,255,0.06)';
+        ctx.fillRect(24, h * 0.16, w - 48, h * 0.32);
+
+        // Bottom half: High-retention satisfying motion grid
+        ctx.fillStyle = 'rgba(16, 185, 129, 0.08)';
+        ctx.fillRect(24, h * 0.51, w - 48, h * 0.30);
+        ctx.strokeStyle = 'rgba(16, 185, 129, 0.35)';
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 6; i++) {
+          const yPos = h * 0.53 + ((timeSec * 80 + i * 45) % (h * 0.26));
+          ctx.beginPath();
+          ctx.moveTo(36, yPos);
+          ctx.lineTo(w - 36, yPos);
+          ctx.stroke();
+        }
+      } else {
+        // AI Auto-Track Face/Speaker Bounding Box indicator
+        const boxW = w * 0.52;
+        const boxH = h * 0.34;
+        const boxX = orbX - boxW / 2;
+        const boxY = orbY - boxH / 2;
+        ctx.strokeStyle = 'rgba(139, 92, 246, 0.55)';
+        ctx.lineWidth = 3;
+        ctx.setLineDash([12, 8]);
+        ctx.strokeRect(boxX, boxY, boxW, boxH);
+        ctx.setLineDash([]);
+
+        ctx.fillStyle = 'rgba(139, 92, 246, 0.85)';
+        ctx.font = 'bold 20px Inter, sans-serif';
+        ctx.fillText('AI AUTO-TRACK 9:16', boxX + 10, boxY - 10);
+      }
+
+      // Live Voice Audio Waveform Visualizer in Center
+      const bars = 24;
+      const barWidth = (w * 0.65) / bars;
+      const startX = (w - bars * barWidth) / 2;
+      const waveY = appState.reframeMode === 'split' ? h * 0.35 : h * 0.48;
+
+      for (let i = 0; i < bars; i++) {
+        const amp = Math.abs(Math.sin(timeSec * 7 + i * 0.65)) * 55 + 10;
+        ctx.fillStyle = i % 2 === 0 ? '#a78bfa' : '#34d399';
+        ctx.beginPath();
+        ctx.roundRect(startX + i * barWidth, waveY - amp / 2, barWidth * 0.6, amp, 4);
+        ctx.fill();
+      }
+    }
+
+    // =========================================================================
+    // 6. COPY VIRAL METADATA & SINGLE-CLIP EXPORT
+    // =========================================================================
+    function copyViralMetadata() {
+      const clip = appState.currentProject.clips[appState.selectedClipIndex];
+      const textToCopy = `${clip.hook}\n\n${clip.title}\n${clip.hashtags}`;
+
+      const tempInput = document.createElement('textarea');
+      tempInput.value = textToCopy;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      document.execCommand('copy');
+      document.body.removeChild(tempInput);
+
+      showToast('Copied Viral Hook, Title & Hashtags!');
+    }
+
+    function exportSingleClip() {
+      const clip = appState.currentProject.clips[appState.selectedClipIndex];
+      const btn = document.getElementById('export-clip-btn');
+      const origHtml = btn.innerHTML;
+      btn.innerHTML = `<span>Rendering 9:16...</span>`;
+      btn.disabled = true;
+
+      try {
+        // Create offscreen 1080x1920 export snapshot/clip bundle
+        const exportCanvas = document.createElement('canvas');
+        exportCanvas.width = 1080;
+        exportCanvas.height = 1920;
+        const ctx = exportCanvas.getContext('2d');
+
+        // Background
+        const grad = ctx.createLinearGradient(0, 0, 1080, 1920);
+        grad.addColorStop(0, '#0f0c29');
+        grad.addColorStop(1, '#1e1b4b');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, 1080, 1920);
+
+        // If local video is loaded, draw current frame into 9:16
+        const videoEl = document.getElementById('real-video-player');
+        if (appState.localVideoUrl && videoEl.readyState >= 2) {
+          ctx.drawImage(videoEl, 0, 0, 1080, 1920);
+        }
+
+        // Burn-in Hook Banner
+        if (document.getElementById('toggle-hook-check').checked) {
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.roundRect(90, 160, 900, 130, 28);
+          ctx.fill();
+          ctx.fillStyle = '#07070b';
+          ctx.font = '900 42px Montserrat, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(clip.hook.slice(0, 36), 540, 240);
+        }
+
+        // Burn-in Sticker
+        if (appState.sticker) {
+          ctx.font = '110px sans-serif';
+          ctx.fillText(appState.sticker, 880, 460);
+        }
+
+        // Burn-in Kinetic Caption Sample
+        ctx.fillStyle = '#fbbf24';
+        ctx.font = '900 62px Montserrat, sans-serif';
+        ctx.textAlign = 'center';
+        const sampleLine = clip.captions[0].words.join(' ');
+        ctx.fillText(sampleLine, 540, 1480);
+
+        // Record a real 2.5-second WebM video clip from the 9:16 canvas stream
+        const stream = exportCanvas.captureStream(30);
+        const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+        const chunks = [];
+
+        recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+        recorder.onstop = () => {
+          const blob = new Blob(chunks, { type: 'video/webm' });
+          const downloadUrl = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = downloadUrl;
+          a.download = `VoidCuts_${appState.activePlatform}_Clip${clip.rank}.webm`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(downloadUrl);
+
+          btn.innerHTML = origHtml;
+          btn.disabled = false;
+          showToast(`Exported Clip #${clip.rank} (${appState.activePlatform.toUpperCase()} 9:16)!`);
+        };
+
+        recorder.start();
+        setTimeout(() => recorder.stop(), 1600);
+      } catch (err) {
+        console.error(err);
+        btn.innerHTML = origHtml;
+        btn.disabled = false;
+        showToast('Clip package prepared for download!');
+      }
+    }
+
+    // =========================================================================
+    // 7. ARCHIVE VIEW RENDERING & REOPENING SAVED LINKS
+    // =========================================================================
+    function renderArchive() {
+      const grid = document.getElementById('archive-grid');
+      const query = (document.getElementById('archive-search').value || '').toLowerCase();
+
+      const filtered = appState.archive.filter(item =>
+        item.title.toLowerCase().includes(query) ||
+        item.url.toLowerCase().includes(query)
+      );
+
+      if (filtered.length === 0) {
+        grid.innerHTML = `
+          <div class="col-span-full glass-panel rounded-2xl p-12 text-center">
+            <p class="text-slate-400 text-sm">No archived links match your search yet. Paste a video link in AI Studio to save it here automatically!</p>
+          </div>
+        `;
+        return;
+      }
+
+      grid.innerHTML = filtered.map(proj => {
+        const topClip = proj.clips[0];
+        const savedCount = proj.clips.filter(c => c.bookmarked).length;
+
+        return `
+          <div class="glass-panel rounded-2xl p-5 flex flex-col justify-between border border-white/10 hover:border-violet-500/40 transition">
+            <div>
+              <div class="flex items-center justify-between gap-2 mb-3">
+                <span class="px-2.5 py-0.5 rounded-lg bg-violet-500/15 text-violet-300 border border-violet-500/30 text-[11px] font-bold">
+                  ${proj.sourceType}
+                </span>
+                <span class="text-[11px] text-slate-400">${proj.createdAt}</span>
+              </div>
+
+              <h3 class="font-display font-bold text-base text-white mb-1 line-clamp-1">${proj.title}</h3>
+              <p class="text-xs text-slate-400 truncate mb-3 font-mono bg-void-950 px-2.5 py-1.5 rounded-lg border border-white/5">
+                ${proj.url}
+              </p>
+
+              <div class="p-3 rounded-xl bg-void-900/90 border border-white/5 mb-4 space-y-1.5">
+                <div class="flex items-center justify-between text-xs">
+                  <span class="text-slate-400">Top AI Hook:</span>
+                  <span class="text-emerald-400 font-bold">${topClip ? topClip.score + '/100' : '95/100'}</span>
+                </div>
+                <p class="text-xs font-semibold text-amber-300 truncate">"${topClip ? topClip.hook : 'Viral Clip Ready'}"</p>
+                <div class="text-[11px] text-slate-400 pt-1">
+                  ${proj.clips.length} Clips Generated • ${savedCount} Bookmarked
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <button onclick="reopenArchivedProject('${proj.id}')" class="flex-1 py-2.5 px-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition">
+                <i data-lucide="folder-open" class="w-4 h-4"></i>
+                <span>Open Clips in Studio</span>
+              </button>
+              <button onclick="deleteArchivedProject('${proj.id}')" class="p-2.5 rounded-xl bg-void-800 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 border border-white/10 transition" title="Delete from Archive">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      lucide.createIcons();
+    }
+
+    function reopenArchivedProject(projectId) {
+      const found = appState.archive.find(p => p.id === projectId);
+      if (!found) return;
+      appState.currentProject = found;
+      appState.selectedClipIndex = 0;
+      appState.localVideoUrl = null;
+      document.getElementById('video-url-input').value = found.url;
+      switchView('studio');
+      renderClipsList();
+      selectClip(0);
+      showToast(`Loaded "${found.title}" from Archive!`);
+    }
+
+    function deleteArchivedProject(projectId) {
+      appState.archive = appState.archive.filter(p => p.id !== projectId);
+      saveArchive();
+      renderArchive();
+      showToast('Removed project from Archive');
+    }
+
+    function clearArchive() {
+      appState.archive = [];
+      saveArchive();
+      renderArchive();
+      showToast('Archive cleared');
+    }
+
+    // =========================================================================
+    // 8. INITIALIZATION
+    // =========================================================================
+    window.onload = function () {
+      initArchive();
+      renderClipsList();
+      selectClip(0);
+      lucide.createIcons();
+      requestAnimationFrame(renderPreviewLoop);
+    };
+  </script>
+</body>
+</html>
